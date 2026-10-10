@@ -20,16 +20,17 @@ Run from `spikes/`, since the scripts import each other by module name:
 ```
 cd spikes
 ../.venv/bin/python make_fixtures.py       # Tests/Fixtures/*.pdf (deterministic)
+../.venv/bin/python make_example_template.py   # Tests/Fixtures/example_voucher_template.pdf (deterministic)
 ../.venv/bin/python make_svg_fixtures.py   # Tests/Fixtures/svg/cubic_only.svg, nonuniform.svg
 ../.venv/bin/python s1_fields.py           # S1: 3 text + 2 image fields, incremental save
 ../.venv/bin/python s5_cut.py              # S5: cut apply / re-edit / remove, MuPDF + PDFium renders (~40 s)
 ../.venv/bin/python s7_svg.py              # S7: SVG parsing, placement, primitive fitting
 ../.venv/bin/python s3_preservation.py     # S3: JS strings and signatures after adding fields
 ../.venv/bin/python s9_fill.py             # S9: fill the S5f template with PyMuPDF, pypdf, pdf-lib
-../.venv/bin/python s10_crop.py            # S10: crop fields to the outline (needs `swift test` output and the PDFKit renderer)
+../.venv/bin/python s10_crop.py            # S10: crop fields to the outline on the example template (needs the PDFKit renderer)
 ```
 
-`s10_crop.py` renders with PDFKit too, through a small Swift tool: build it once with `swiftc -O pdfkit_render.swift -o out/pdfkit_render`. Without an argument it fills and measures the Swift engine's `out/swift/swift_crossing_cut.pdf`; with a template path it builds the candidate variants (appearance clip, open clip, cover annotation) and compares them.
+`s10_crop.py` renders with PDFKit too, through a small Swift tool: build it once with `swiftc -O pdfkit_render.swift -o out/pdfkit_render`. Without an argument it uses `Tests/Fixtures/example_voucher_template.pdf` (cut with the outline of its die line, every text field filled) and builds the candidate variants (appearance clip, open clip, cover annotation) to compare them; give it a template path to do the same on your own. `S10_TEMPLATE_IS_SWIFT=1` instead fills and measures a file the Swift engine already cut (by default `out/swift/swift_crossing_cut.pdf`, written by `swift test`).
 
 `s9_fill.py` needs pdf-lib, installed locally: `(cd node && npm ci)`. Set `S9_TEMPLATE=path.pdf` to run the S9 checks on another template, for example the Swift app's output in `out/swift/` (written by `swift test`).
 
@@ -45,6 +46,7 @@ Each spike prints one PASS/FAIL line per check and exits non-zero if any check f
 |---|---|
 | `common.py` | Key-level PDF object helpers, incremental save, prefix check, libqpdf check, MuPDF and PDFium renderers at the same exact scale, mask morphology |
 | `make_fixtures.py` | Synthetic 842 x 595 voucher (several content streams, no white pixels) and two unbalanced q/Q fixtures |
+| `make_example_template.py` | The example voucher template: synthetic two-page landscape template (placed raster, vector art, 1 pt die line, 6 text and 2 image fields incl. an indirect `/Rect` and a parent with one `/Kids` widget), uncut |
 | `s1_fields.py` | S1, MuPDF side: AcroForm text and image fields through the object API |
 | `outline.py` | Outline model (line / arc / curve), arc to Bézier, PDF path ops, `/Segments` read and write, reference shapes, analytic rasterising, Hausdorff distance |
 | `cut.py` | The shape cut: q/Q tokenizer, Wrap and XObject modes, PieceInfo storage, edit, remove, marker recovery |

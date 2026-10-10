@@ -315,31 +315,34 @@ final class FieldCropTests: XCTestCase {
         XCTAssertGreaterThan(a.width * a.height, 0.5 * 100 * 200)
     }
 
-    // MARK: A real-world template (opt-in; no real template is included in the repo)
+    // MARK: The example template (Tests/Fixtures/example_voucher_template.pdf)
 
-    /// Applies the smart-outline result (11 lines, 3 arcs) to a copy of a real template
-    /// and writes the cut, cropped template for spikes/s10_crop.py. Set VE_TEMPLATE_PDF to
-    /// the copy (never the original) and VE_CROP_OUT to a folder; skipped when unset.
-    /// The outline and pixel probes were measured on the template used during development,
-    /// so they need adjusting for other templates. VE_TEMPLATE_IMAGE_FIELD names the image
-    /// field that crosses the outline (default: the first image field).
-    func testRealTemplateCrop() throws {
-        guard let path = ProcessInfo.processInfo.environment["VE_TEMPLATE_PDF"] else { throw XCTSkip("set VE_TEMPLATE_PDF to a copy of your own template to run this test") }
-        guard let data = FileManager.default.contents(atPath: path) else { throw XCTSkip("no template copy at \(path)") }
+    /// Applies an outline matching the example template's die line (11 lines, 1 arc) and
+    /// writes the cut, cropped template for spikes/s10_crop.py when VE_CROP_OUT names a
+    /// folder. The pixel probes are measured on the example template (stepped left edge at
+    /// x 36 / 96 / 150, semicircular right end). VE_TEMPLATE_PDF points the test at a copy of
+    /// your own template instead (never the original); the outline and probes then need
+    /// adjusting. VE_TEMPLATE_IMAGE_FIELD names the image field that crosses the outline
+    /// (default: product_image of the example, else the first image field).
+    func testExampleTemplateCrop() throws {
+        let env = ProcessInfo.processInfo.environment
+        let path = env["VE_TEMPLATE_PDF"] ?? MuPDFEngineTests.fixtures.appendingPathComponent("example_voucher_template.pdf").path
+        let data = try XCTUnwrap(FileManager.default.contents(atPath: path), "no template at \(path)")
         let engine = try MuPDFEngine(data: data)
         let t0 = try engine.readTemplate().template
         XCTAssertFalse(t0.fields.isEmpty)
         var t1 = t0
-        t1.outlines[0] = Self.realOutline
+        t1.outlines[0] = Self.exampleOutline
         let s1 = try engine.save(baseline: t0, edited: t1)
-        let imageName = ProcessInfo.processInfo.environment["VE_TEMPLATE_IMAGE_FIELD"]
+        let imageName = env["VE_TEMPLATE_IMAGE_FIELD"] ?? (env["VE_TEMPLATE_PDF"] == nil ? "product_image" : nil)
         let image = try XCTUnwrap(t0.fields.first { $0.kind == .image && (imageName == nil || $0.name == imageName) })
         let num = try XCTUnwrap(engine.objectNumbers[image.id])
         XCTAssertTrue(try isWrapper(s1.data, num).wrapped, "\(s1.summary)")
-        let g = try pdfkitGray(s1.data, [PDFPoint(15, 300), PDFPoint(60, 150), PDFPoint(200, 300)])
+        let g = try pdfkitGray(s1.data, [PDFPoint(25, 300), PDFPoint(60, 150), PDFPoint(200, 300)])
         XCTAssertEqual(g[0], 255, "left of the steps: blank")
         XCTAssertEqual(g[1], 255, "left of the second step: blank")
-        XCTAssertGreaterThan(g[2], 240, "inside: the field's white placeholder")
+        XCTAssertLessThan(g[2], 200, "inside: the artwork shows through the image slot")
+        XCTAssertGreaterThan(g[2], 60, "inside: the artwork shows through the image slot")
         var t2 = t1
         t2.outlines[0] = nil
         let s2 = try engine.save(baseline: t1, edited: t2)
@@ -349,28 +352,25 @@ final class FieldCropTests: XCTestCase {
         XCTAssertEqual(try b.objectSyntax(try XCTUnwrap(try b.get(pb, "Annots").refNumber)),
                        try a.objectSyntax(try XCTUnwrap(try a.get(pa, "Annots").refNumber)))
         XCTAssertEqual(try b.get(num, "AP"), try a.get(num, "AP"))
-        if let dir = ProcessInfo.processInfo.environment["VE_CROP_OUT"] {
-            try s1.data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("swift_real_cut_crop.pdf"))
-            try s2.data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("swift_real_removed.pdf"))
-            var off = t1
-            off.cropFieldsToOutline = false
+        if let dir = env["VE_CROP_OUT"] {
+            try s1.data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("swift_example_cut_crop.pdf"))
+            try s2.data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("swift_example_removed.pdf"))
             let e2 = try MuPDFEngine(data: data)
             let r0 = try e2.readTemplate().template
             var o1 = r0
-            o1.outlines[0] = Self.realOutline
+            o1.outlines[0] = Self.exampleOutline
             o1.cropFieldsToOutline = false
-            try e2.save(baseline: r0, edited: o1).data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("swift_real_cut_nocrop.pdf"))
+            try e2.save(baseline: r0, edited: o1).data.write(to: URL(fileURLWithPath: dir).appendingPathComponent("swift_example_cut_nocrop.pdf"))
         }
     }
 
-    /// RealTemplateTests' auto-detect result on page 1.
-    static let realOutline = Outline(start: PDFPoint(584.41, 75.86), segments: [
-        .line(to: PDFPoint(140.68, 75.86)), .line(to: PDFPoint(140.68, 130.81)), .line(to: PDFPoint(85.88, 130.81)),
-        .line(to: PDFPoint(85.88, 186.03)), .line(to: PDFPoint(31.35, 186.03)), .line(to: PDFPoint(31.35, 417.84)),
-        .line(to: PDFPoint(86.59, 417.84)), .line(to: PDFPoint(86.59, 472.60)), .line(to: PDFPoint(141.30, 472.60)),
-        .line(to: PDFPoint(141.30, 527.76)), .line(to: PDFPoint(583.12, 527.76)),
-        .arc(to: PDFPoint(810.01, 328.98), center: PDFPoint(583.70, 299.55), clockwise: true),
-        .arc(to: PDFPoint(744.93, 142.83), center: PDFPoint(585.84, 302.90), clockwise: true),
-        .arc(to: PDFPoint(584.41, 75.86), center: PDFPoint(585.04, 300.19), clockwise: true),
+    /// The example template's die line (what the smart outline finds on its page 1).
+    static let exampleOutline = Outline(start: PDFPoint(150, 70), segments: [
+        .line(to: PDFPoint(150, 126)), .line(to: PDFPoint(96, 126)), .line(to: PDFPoint(96, 182)),
+        .line(to: PDFPoint(36, 182)), .line(to: PDFPoint(36, 418)), .line(to: PDFPoint(96, 418)),
+        .line(to: PDFPoint(96, 474)), .line(to: PDFPoint(150, 474)), .line(to: PDFPoint(150, 525)),
+        .line(to: PDFPoint(590, 525)),
+        .arc(to: PDFPoint(590, 70), center: PDFPoint(590, 297.5), clockwise: true),
+        .line(to: PDFPoint(150, 70)),
     ])
 }

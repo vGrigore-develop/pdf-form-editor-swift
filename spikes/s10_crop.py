@@ -24,11 +24,13 @@ pdfkit_render.swift). Metric: pixels more than 1 px outside the outline that are
 not white; and the share of each image slot (inside the outline) that shows the
 filled image.
 
-Run:  ../.venv/bin/python s10_crop.py                 # the Swift engine's out/swift/swift_crossing_cut.pdf
+Run:  ../.venv/bin/python s10_crop.py                 # the example template, Tests/Fixtures/example_voucher_template.pdf
       ../.venv/bin/python s10_crop.py template.pdf    # build and compare the variants on a template
-  With a template (or $S10_TEMPLATE), e.g. a copy of your own template, the outline is
-  read from its cut, or the smart-outline auto-detect result below is applied (measured
-  on the template used during development; pass a template with a cut for any other).
+      S10_TEMPLATE_IS_SWIFT=1 ../.venv/bin/python s10_crop.py   # the Swift engine's out/swift/swift_crossing_cut.pdf
+  Without a template the example one is used, with its sample text in every text field. With
+  a template (or $S10_TEMPLATE), e.g. a copy of your own, the outline is read from its cut,
+  or the example template's outline (EXAMPLE_OUTLINE below) is applied; pass a template with
+  a cut for any other shape.
   S10_VALUES=values.json ({"field": "text", ...}) and S10_IMAGES=a,b name the text and
   image fields to fill; by default the S9 names are used if present, otherwise every text
   field gets a sample value and every push button is filled as an image.
@@ -60,15 +62,14 @@ from outline import Outline, arc_to_beziers, fmt, raster_mask, to_pdf_path
 OUT = common.OUT / "s10"
 PDFKIT = common.OUT / "pdfkit_render"
 
-# The smart outline's auto-detect result on page 1 of the real template used during
-# development (11 lines, 3 arcs; RealTemplateTests prints it).
-REAL_OUTLINE = Outline((584.41, 75.86), [
-    ("L", 140.68, 75.86), ("L", 140.68, 130.81), ("L", 85.88, 130.81), ("L", 85.88, 186.03),
-    ("L", 31.35, 186.03), ("L", 31.35, 417.84), ("L", 86.59, 417.84), ("L", 86.59, 472.60),
-    ("L", 141.30, 472.60), ("L", 141.30, 527.76), ("L", 583.12, 527.76),
-    ("A", 810.01, 328.98, 583.70, 299.55, True), ("A", 744.93, 142.83, 585.84, 302.90, True),
-    ("A", 584.41, 75.86, 585.04, 300.19, True),
+# The example template's die line (11 lines, 1 arc), the shape the smart outline finds on
+# page 1 of Tests/Fixtures/example_voucher_template.pdf (RealTemplateTests asserts it).
+EXAMPLE_OUTLINE = Outline((150, 70), [
+    ("L", 150, 126), ("L", 96, 126), ("L", 96, 182), ("L", 36, 182), ("L", 36, 418),
+    ("L", 96, 418), ("L", 96, 474), ("L", 150, 474), ("L", 150, 525), ("L", 590, 525),
+    ("A", 590, 70, 590, 297.5, True), ("L", 150, 70),
 ])
+EXAMPLE_TEMPLATE = common.FIXTURES / "example_voucher_template.pdf"
 SAMPLE_TEXT = "Sample text 2026"
 
 
@@ -222,12 +223,15 @@ def measure(path: Path, o: Outline, slots: dict, masks: dict, size) -> dict:
 
 def main() -> None:
     given = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("S10_TEMPLATE")
-    swift_mode = bool(os.environ.get("S10_TEMPLATE_IS_SWIFT")) or given is None
-    # Without an argument: the Swift engine's own cropped template (written by `swift test`).
-    template = Path(given or common.OUT / "swift" / "swift_crossing_cut.pdf").resolve()
+    swift_mode = bool(os.environ.get("S10_TEMPLATE_IS_SWIFT"))
+    # Without an argument: the example template in Tests/Fixtures, cut with EXAMPLE_OUTLINE.
+    example = given is None
+    # With S10_TEMPLATE_IS_SWIFT=1 and no path: the Swift engine's own cut and cropped output.
+    template = Path(given or (common.OUT / "swift" / "swift_crossing_cut.pdf" if swift_mode else EXAMPLE_TEMPLATE)).resolve()
+    example = example and not swift_mode
     r = Report(f"S10 crop fields to the outline: {template.name}")
     with pymupdf.open(template) as doc:
-        o = cut.read_outline(doc, 0) or REAL_OUTLINE
+        o = cut.read_outline(doc, 0) or EXAMPLE_OUTLINE
         mb = nums(doc, doc[0].xref, "MediaBox")
         size = (mb[2] - mb[0], mb[3] - mb[1])
         widgets = [(w.field_name, w.field_type) for w in doc[0].widgets()]
@@ -239,6 +243,8 @@ def main() -> None:
                  [n for n, t in widgets if t == pymupdf.PDF_WIDGET_TYPE_BUTTON]
     if os.environ.get("S10_VALUES"):
         values = {k: v for k, v in json.loads(Path(os.environ["S10_VALUES"]).read_text()).items() if k in names}
+    elif example:
+        values = {n: SAMPLE_TEXT for n, t in widgets if t == pymupdf.PDF_WIDGET_TYPE_TEXT}
     else:
         values = {k: v for k, v in s9.ASCII_VALUES.items() if k in names} or \
                  {n: SAMPLE_TEXT for n, t in widgets if t == pymupdf.PDF_WIDGET_TYPE_TEXT}

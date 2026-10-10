@@ -4,17 +4,31 @@ import VoucherModel
 import VoucherGeometry
 import VoucherTrace
 
-/// The smart outline on a real two-page voucher template. Opt-in: runs only when
-/// $VE_TEMPLATE_PDF points at a copy of one (never the original); no real template is
-/// included in the repo. On the template used during development, page 1's artwork is one
-/// big JPEG with the die line drawn into the image as a ~1 pt dark stroke, and page 2 is
-/// vector art.
+/// The smart outline on a two-page voucher template. By default this is the synthetic
+/// Tests/Fixtures/example_voucher_template.pdf: page 1 has a placed JPEG on the left, a cream
+/// panel, a solid dark half-disc and a ~1 pt die line along the intended shape (stepped
+/// left edge with 3 steps, semicircular right end); page 2 is the same shape in vector art.
+/// $VE_TEMPLATE_PDF points the tests at a copy of your own template instead (never the
+/// original); the shape assertions below then need adjusting.
 final class RealTemplateTests: XCTestCase {
     static let path = ProcessInfo.processInfo.environment["VE_TEMPLATE_PDF"]
+        ?? URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/example_voucher_template.pdf").path
+
+    static var usesExample: Bool { ProcessInfo.processInfo.environment["VE_TEMPLATE_PDF"] == nil }
+
+    /// The die line the example template was drawn with (spikes/make_example_template.py).
+    static let exampleOutline = Outline(start: PDFPoint(150, 70), segments: [
+        .line(to: PDFPoint(150, 126)), .line(to: PDFPoint(96, 126)), .line(to: PDFPoint(96, 182)),
+        .line(to: PDFPoint(36, 182)), .line(to: PDFPoint(36, 418)), .line(to: PDFPoint(96, 418)),
+        .line(to: PDFPoint(96, 474)), .line(to: PDFPoint(150, 474)), .line(to: PDFPoint(150, 525)),
+        .line(to: PDFPoint(590, 525)),
+        .arc(to: PDFPoint(590, 70), center: PDFPoint(590, 297.5), clockwise: true),
+        .line(to: PDFPoint(150, 70)),
+    ])
 
     func load(page: Int) throws -> (PageRaster, TraceContext) {
-        guard let path = Self.path else { throw XCTSkip("set VE_TEMPLATE_PDF to a copy of your own template to run this test") }
-        guard let data = FileManager.default.contents(atPath: path) else { throw XCTSkip("no template copy at \(path)") }
+        let data = try XCTUnwrap(FileManager.default.contents(atPath: Self.path), "no template at \(Self.path)")
         let cg = try XCTUnwrap(CGPDFDocument(CGDataProvider(data: data as CFData)!)?.page(at: page + 1))
         let mb = cg.getBoxRect(.mediaBox)
         let box = PDFRect(x: Double(mb.minX), y: Double(mb.minY), width: Double(mb.width), height: Double(mb.height))
@@ -56,6 +70,13 @@ final class RealTemplateTests: XCTestCase {
         describe("page \(page + 1) auto-detect", detected)
         dump("real-p\(page + 1)-detect", r, detected)
         XCTAssertEqual(Geometry.validate(detected), [])
+        if Self.usesExample {
+            // The example template's die line: 11 lines and one arc, within a point of the design.
+            XCTAssertEqual(detected.counts.lines, 11)
+            XCTAssertEqual(detected.counts.arcs, 1)
+            XCTAssertEqual(detected.counts.curves, 0)
+            XCTAssertLessThan(Synth.hausdorff(detected, Self.exampleOutline), 1.0)
+        }
 
         // Clicks: every detected vertex, nudged 1.5 pt, plus the middle of each arc.
         var clicks: [PDFPoint] = []

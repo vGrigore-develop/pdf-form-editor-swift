@@ -319,11 +319,13 @@ final class SmartOutlineTests: XCTestCase {
         return Data(out.utf8)
     }
 
-    /// A real template (opt-in via $VE_TEMPLATE_PDF, a copy, never the original; none is
-    /// included in the repo): detect on page 1 and snapshot. Skipped when unset.
-    func testRealTemplateSnapshot() throws {
-        guard let path = ProcessInfo.processInfo.environment["VE_TEMPLATE_PDF"] else { throw XCTSkip("set VE_TEMPLATE_PDF to a copy of your own template to run this test") }
-        guard let data = FileManager.default.contents(atPath: path) else { throw XCTSkip("no template copy at \(path)") }
+    /// Detect on page 1 of the example template (Tests/Fixtures/example_voucher_template.pdf)
+    /// and snapshot. $VE_TEMPLATE_PDF points the test at a copy of your own template instead
+    /// (never the original); the shape assertions are then skipped, the clicks are as on the example.
+    func testExampleTemplateSnapshot() throws {
+        let custom = ProcessInfo.processInfo.environment["VE_TEMPLATE_PDF"]
+        let path = custom ?? AppTests.fixtures.appendingPathComponent("example_voucher_template.pdf").path
+        let data = try XCTUnwrap(FileManager.default.contents(atPath: path), "no template at \(path)")
         try open(data)
         pdfView.scaleFactor = 1.1
         pdfView.layoutDocumentView()
@@ -332,13 +334,19 @@ final class SmartOutlineTests: XCTestCase {
         click(12, 580)
         let o = try XCTUnwrap(model.template.outlines[0])
         XCTAssertEqual(Geometry.validate(o), [])
-        print("REAL canvas detect: \(o.counts)")
-        snapshot("smart-5-real-detect")
+        if custom == nil {
+            XCTAssertEqual(o.counts.lines, 11)
+            XCTAssertEqual(o.counts.arcs, 1)
+            XCTAssertEqual(o.counts.curves, 0)
+        }
+        print("EXAMPLE canvas detect: \(o.counts)")
+        snapshot("smart-5-example-detect")
         undo.undo()
+        XCTAssertNil(model.template.outlines[0])
         UserDefaults.standard.set(TracePrefs.Mode.points.rawValue, forKey: TracePrefs.modeKey)
-        click(142, 527); click(583, 527.5)
-        move(805, 330)
+        click(151, 525); click(589, 525)
+        move(815, 330)
         XCTAssertNotNil(overlay.hoverTrace)
-        snapshot("smart-6-real-live")
+        snapshot("smart-6-example-live")
     }
 }
