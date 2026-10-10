@@ -26,6 +26,8 @@ For a quick development loop without the app bundle:
 swift run PDFVoucherEditor Tests/Fixtures/synthetic_voucher.pdf
 ```
 
+The app icon is in `Resources/AppIcon/`; regenerate the `.icns` with `scripts/make-icon.sh`. The Liquid Glass version (`AppIcon.icon`, an Icon Composer document) is compiled by `build-app.sh` when Xcode 26+ is installed; see `Resources/AppIcon/README.md`.
+
 The app saves into the file you opened, as an incremental update. Work on a copy when experimenting.
 
 ## Templates
@@ -99,7 +101,8 @@ Sources/CMuPDFShim        the C shim over MuPDF (fz_try everywhere; strings in, 
 Sources/MuPDFEngine       reader, key-level writer, cut writer, incremental save
 Sources/VoucherEditorApp  AppKit/SwiftUI app: NSDocument, canvas overlay on PDFView, inspector, sidebar
 Tests/                    XCTest targets + Fixtures/
-scripts/                  build-mupdf.sh, build-app.sh
+scripts/                  build-mupdf.sh, build-app.sh, make-icon.sh, make-liquid-icon.sh
+Resources/AppIcon/        app icon sources (SVG), the committed AppIcon.icns and the AppIcon.icon document
 spikes/                   M0 Python spikes (S1, S3, S5, S7, S9) and results
 ```
 
