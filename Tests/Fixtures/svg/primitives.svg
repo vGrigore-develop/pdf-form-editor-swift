@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hand-written S7 fixture: one element per primitive, checked one by one
+  (expected segment kinds) and against the svgelements oracle (geometry).
+  1 user unit = 1 pt (width/height in pt, viewBox the same size).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 842 595" width="842pt" height="595pt">
+  <rect id="rrect" x="100" y="100" width="200" height="120" rx="20"/>
+  <rect id="rrect_elliptic" x="330" y="230" width="100" height="60" rx="20" ry="10"/>
+  <circle id="circle" cx="500" cy="150" r="60"/>
+  <ellipse id="ellipse" cx="700" cy="150" rx="80" ry="40"/>
+  <polygon id="poly" points="100,300 200,300 150,380"/>
+  <polyline id="open" points="300,300 350,350 400,300"/>
+  <path id="curvy" d="M450 300 C480 260 520 260 550 300 S620 340 650 300 Q700 260 750 300 T780 380 L450 380 Z"/>
+  <path id="compact" d="m460,420a20,20 0 1020,0l.5.5-1e1,1E1z"/>
+  <g transform="translate(600 480) scale(1.5 1)"><circle id="squashed" cx="0" cy="0" r="50"/></g>
+  <g transform="rotate(25 200 480)"><rect id="rotrect" x="120" y="440" width="160" height="80" rx="15" ry="15"/></g>
+</svg>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hand-written S7 fixture. Page-sized artboard: viewBox is exactly 2x an
+  842 x 595 pt page; width/height are A4 landscape in mm (Actual size test).
+
+  The voucher outline is drawn in a local frame through a chain of groups that
+  uses every transform type. The chain composes to: local (x, y) ->
+  root (2x + 10, 1170 - 2y), i.e. a vertical flip, so the arc's sweep flag (1)
+  is opposite to how it looks on screen. After Fit to page the outline must
+  equal outline.reference_outline(): local -> page is a pure translation (+5, +10).
+
+  Also present: a smaller rounded rect (must lose the "largest shape" vote)
+  and an open polyline (must be ignored with a note).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1684 1190" width="297mm" height="210mm">
+  <g transform="rotate(180 842 595)">
+    <g transform="translate(1684,0) scale(-1,1)">
+      <g transform="skewX(15)">
+        <g transform="skewX(-15)">
+          <g transform="skewY(-20)">
+            <g transform="skewY(20)">
+              <g transform="rotate(30)">
+                <g transform="rotate(-30)">
+                  <g transform="matrix(4 0 0 4 10 20)">
+                    <path id="voucher" transform="scale(0.5)" fill="#000"
+                          d="M559.5 535 H35 v-85 h20 v-80 l20,0 V205 h-20v-80h-20 V40 l524.5 0
+                             a247.5 247.5 0 0 1 0 495 z"/>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+  <rect id="decoy" x="300" y="300" width="200" height="100" rx="12" fill="#c00"/>
+  <polyline id="open" points="100,1150 200,1100 300,1150" fill="none" stroke="#000"/>
+</svg>

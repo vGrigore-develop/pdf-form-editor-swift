@@ -1,0 +1,34 @@
+.venv/
+__pycache__/
+*.pyc
+spikes/out/
+.DS_Store
+spikes/node/node_modules/
+vendor/download/
+vendor/mupdf-*-source/
+vendor/mupdf/
+.build/
+build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+
+# Third-party sources and builds (scripts/build-mupdf.sh recreates them)
+vendor/
+
+# Local agent / editor settings, never published
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+graphify-out/
+*.xcuserstate
+.swiftpm/
+
+# Secrets and private inputs
+.env
+.env.*
+*.pem
+*.p12
+*.key
+# Real templates are private: keep your own copies outside the repo (see README)
+private/

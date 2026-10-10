@@ -1,0 +1,8 @@
+numpy==2.5.3
+pikepdf==10.16.0
+pillow==12.3.0
+pyHanko==0.37.0
+pymupdf==1.28.2
+pypdf==6.20.0
+pypdfium2==5.14.0
+svgelements==1.9.6

@@ -1,0 +1,10 @@
+{
+  "name": "voucher-editor-spikes-node",
+  "private": true,
+  "description": "Local-only Node deps for spikes S2/S9 (pdf-lib). Installed with `npm ci` in this folder; nothing global.",
+  "type": "module",
+  "dependencies": {
+    "@pdf-lib/fontkit": "1.1.1",
+    "pdf-lib": "1.17.1"
+  }
+}
